@@ -1,0 +1,65 @@
+services:
+  web:
+    container_name: website
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CLIENTVAR: "clientvar"
+    ports:
+      - 3000:3000
+    restart: always
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:admin2024@postgres:5432/sitecms-db?schema=public
+      - S3_ENDPOINT=minio
+      - S3_PORT=9000
+      - S3_ACCESS_KEY=minio
+      - S3_SECRET_KEY=miniosecret
+      - S3_BUCKET_NAME=uploads
+    depends_on:
+      - postgres
+      - minio
+      - redis
+    command: sh ./database-push.sh
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: always
+    command: redis-server
+    ports:
+      - "6379:6379"
+    environment:
+      REDIS_ENDPOINT: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://:redissecret@redis:6379
+      REDIS_USERNAME: redis
+      REDIS_PASSWORD: redissecret
+      REDIS_DB: 0
+  postgres:
+    image: postgres:15.3
+    container_name: postgres
+    ports:
+      - 54320:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin2024
+      POSTGRES_DB: sitecms-db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+  minio:
+    container_name: minio
+    image: bitnami/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_storage:/data
+volumes:
+  postgres-data:
+  minio_storage:
